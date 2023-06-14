@@ -1,0 +1,39 @@
+FROM nvidia/cuda:12.0.0-cudnn8-runtime-ubuntu20.04
+#set up environment
+ENV DEBIAN_FRONTEND=noninteractive
+ENV NVIDIA_VISIBLE_DEVICES all
+
+RUN apt-get update && apt-get install --no-install-recommends --no-install-suggests -y curl
+RUN apt-get install -y software-properties-common
+RUN add-apt-repository ppa:deadsnakes/ppa
+RUN apt-get update
+RUN apt-get -y install python3.9
+RUN apt-get -y install python3-pip
+RUN apt-get install -y python3.9-distutils
+RUN apt-get install -y python3-apt
+RUN python3.9 -m pip install pip --upgrade
+RUN python3.9 -m pip install pipenv
+# RUN echo "PATH=$HOME/.local/bin:$PATH" >> ~/.bashrc
+# Copy our application code
+WORKDIR /var/app
+# . Here means current directory.
+COPY ./Pipfile ./
+RUN pipenv install --python 3.9
+RUN pipenv run pip3 install torch --index-url https://download.pytorch.org/whl/cu118
+COPY ./main.py ./model.py ./
+# Start the app
+EXPOSE 8000
+CMD ["pipenv", "run", "uvicorn","main:app", "--host","0.0.0.0"]
+
+
+
+
+
+
+
+
+
+
+
+
+

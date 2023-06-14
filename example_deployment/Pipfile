@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+fastapi = "*"
+transformers = "*"
+uvicorn = "*"
+accelerate = "*"
+optimum = "*"
+bitsandbytes = "0.35.0"
+sentencepiece = "*"
+torch-tensorrt = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
