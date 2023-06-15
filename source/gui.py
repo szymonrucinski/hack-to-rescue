@@ -1,7 +1,9 @@
 import streamlit as st
 from langchain.document_loaders import PyPDFLoader
-from backend import get_problem_summary
+from backend import get_problem_summary, get_text_summary, suggest
 import logging
+import json
+import pandas as pd
 
 
 # def add_bg_from_url():
@@ -64,5 +66,18 @@ if uploaded_files is not None:
     list_of_pages = []
     loader = PyPDFLoader("file.pdf")
     documents = loader.load()
-    summary = get_problem_summary(documents)
-    st.write(summary)
+    text_summary = get_text_summary(documents)
+    st.text_area("Summary", text_summary, height=300)
+
+    problems_summary = get_problem_summary(documents)
+    problem_summary_json = json.loads(problems_summary)
+    df = pd.DataFrame.from_dict(problem_summary_json, orient="index")
+    st.table(df)
+
+    st.write("Solution suggestions:")
+    suggestion = suggest(problems_summary)
+    for s in suggestion:
+        df = pd.DataFrame.from_dict(s, orient="index")
+        st.table(
+            df,
+        )

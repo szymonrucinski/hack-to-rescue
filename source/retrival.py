@@ -1,7 +1,6 @@
 import os
 import pprint
 
-os.environ["OPENAI_API_KEY"] = "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"
 from langchain.document_loaders import PyPDFLoader
 
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -12,7 +11,7 @@ from langchain.vectorstores import Chroma
 from langchain import OpenAI
 from langchain.chains import RetrievalQAWithSourcesChain
 
-loader = PyPDFLoader.Pdf
+loader = PyPDFLoader("../data/CPDs/CPD Somalia.pdf")
 documents = loader.load()
 
 from langchain.chains import RetrievalQA
@@ -22,7 +21,7 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
 
 # split the documents into chunks
-text_splitter = CharacterTextSplitter(chunk_size=4000, chunk_overlap=0)
+text_splitter = CharacterTextSplitter(chunk_size=4000, chunk_overlap=2000)
 texts = text_splitter.split_documents(documents)
 # select which embeddings we want to use
 embeddings = OpenAIEmbeddings()
