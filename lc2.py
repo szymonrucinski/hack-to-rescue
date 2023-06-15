@@ -4,7 +4,7 @@
 import os
 import pprint
 
-os.environ["OPENAI_API_KEY"] = "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"
+os.environ["OPENAI_API_KEY"] = ""
 from langchain.document_loaders import PyPDFLoader
 from langchain import OpenAI
 
@@ -21,7 +21,7 @@ from langchain.document_loaders import TextLoader
 
 def request_chatgpt(prompt):
     # Define your API key
-    api_key = "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"
+    api_key = ""
 
     # Define the API endpoint URL
     endpoint = "https://api.openai.com/v1/chat/completions"
@@ -35,6 +35,7 @@ def request_chatgpt(prompt):
     # Define the API request data
     data = {
         "model": "gpt-3.5-turbo-16k",
+        "temperature": 0,
         "messages": [{"role": "user", "content": prompt}]
     }
 
@@ -63,7 +64,7 @@ def summarize(path):
 
     text = " ".join([_.page_content for _ in documents])
 
-    prompt = f"Summarize the most pressing issues outlined and the initiatives as well as the desired outcomes of the project proposal in triple brackets in 100 to 120 words:\n\n((({text})))"
+    prompt = f"Summarize the most pressing issues outlined and the initiatives as well as the desired outcomes of the project proposal in triple brackets in 200 to 250 words:\n\n((({text})))"
 
     return request_chatgpt(prompt)
 
@@ -108,4 +109,7 @@ def suggest(summary):
 
 
 summary = summarize("data\CPDs\CPD Somalia.pdf")
+print(summary)
 results = suggest(summary)
+
+suggest("We are looking for ways to use drones for help in agriculture.")
