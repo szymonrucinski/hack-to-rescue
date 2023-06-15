@@ -16,6 +16,9 @@ from langchain.vectorstores import Chroma
 import pandas as pd
 import requests
 
+from langchain.document_loaders import TextLoader
+
+
 def request_chatgpt(prompt):
     # Define your API key
     api_key = "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"
@@ -54,54 +57,55 @@ def request_chatgpt(prompt):
     return response_text
 
 
-data = pd.read_excel("data/data.xlsx")
-# data = data[["Solution Name", "The Problem", "The Solution"]]
-list_data = data.values.tolist()
+def summarize(path):
+    loader = PyPDFLoader(path)
+    documents = loader.load()
+
+    text = " ".join([_.page_content for _ in documents])
+
+    prompt = f"Summarize the most pressing issues outlined and the initiatives as well as the desired outcomes of the project proposal in triple brackets in 100 to 120 words:\n\n((({text})))"
+
+    return request_chatgpt(prompt)
 
 
-loader = PyPDFLoader("data\CPDs\CPD Somalia.pdf")
-documents = loader.load()
+def suggest(summary):
+    loader = TextLoader("solution_summaries.txt")
+    documents = loader.load()
 
-text = " ".join([_.page_content for _ in documents])
+    # split the documents into chunks
+    text_splitter = CharacterTextSplitter(separator="\n\n====================", chunk_size=500)
+    texts = text_splitter.split_documents(documents)
 
-prompt = f"Summarize the following text (which has been filtered of stop words) in triple brackets in about 5000 words:\n\n((({text})))"
+    embeddings = OpenAIEmbeddings()
+    # create the vectorestore to use as the index
+    db = Chroma.from_documents(texts, embeddings)
+    # expose this index in a retriever interface
+    retriever = db.as_retriever(search_type="similarity", search_kwargs={"k": 32})
+    # create a chain to answer questions
+    from langchain.chat_models import ChatOpenAI
+    qa = RetrievalQA.from_chain_type(
+        llm=ChatOpenAI(model_name="gpt-3.5-turbo-16k", temperature=0), chain_type="stuff", retriever=retriever, return_source_documents=True
+    )
+    query = "Which five of the following [[[solutions]]] best answer the problem posed in the initial (((project proposal))), and why? Consider relevance of the solutions, geography, economics, and any other potential reasons when answering. Return the 5 top solutions ranked from best to worst, in the following format:\n{\"NAME\": \"solutionname\", \"CATEGORY\": \"solutioncategory\", \"RECOMMENDATION\": \"how to apply the solution to the specific initiatives mentioned\", \"OUTCOME\": \"the expected effects of the application of the solution in the context of the proposal\", \"ISSUES\": \"potential issues with the application of the solution to the problem or areas which this solution does not address\"}. Make sure to output each solution in json format!\n\n"
+    query += f"((({summary})))"
 
-out = request_chatgpt(prompt)
+    result = qa({"query": query})
 
-print(out)
+    result_text = result["result"]
+    print()
 
-prompt = f"((({out})))\n"
+    import json
+    ret = []
+    for r in result_text.split("\n"):
+        try:
+            r = json.loads(r)
+            ret.append(r)
+            print(r)
+        except:
+            pass
 
-for d in list_data:
-    prompt += "\n\n\n[[["
+    return ret
 
-    for cat, datapoint in zip(data.columns, d):
-        prompt += f"\n{cat.upper()} : {datapoint}\n"
 
-    prompt += "]]]\n=====\n"
-
-with open("temp_text.txt", "w+", encoding="utf-8") as f:
-    f.write(prompt)
-
-from langchain.document_loaders import TextLoader
-
-loader = TextLoader("solution_summaries.txt")
-documents = loader.load()
-
-# split the documents into chunks
-text_splitter = CharacterTextSplitter(separator="\n\n====================", chunk_size=500)
-texts = text_splitter.split_documents(documents)
-
-embeddings = OpenAIEmbeddings()
-# create the vectorestore to use as the index
-db = Chroma.from_documents(texts, embeddings)
-# expose this index in a retriever interface
-print(texts)
-retriever = db.as_retriever(search_type="similarity", search_kwargs={"k": 8})
-# create a chain to answer questions
-qa = RetrievalQA.from_chain_type(
-    llm=OpenAI(), chain_type="stuff", retriever=retriever, return_source_documents=True
-)
-query = f"Which five of the following [[[solutions]]] best answer the problem posed in the initial (((project proposal))), and why? Consider relevance of the solutions, geography, economics, and any other potential reasons when answering. Return the 5 top solutions ranked from best to worst.\n\n((({out})))"
-result = qa({"query": query})
-pprint.pprint(result)
+summary = summarize("data\CPDs\CPD Somalia.pdf")
+results = suggest(summary)
